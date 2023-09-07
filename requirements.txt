@@ -13,4 +13,4 @@ packaging==23.1
 python-engineio==4.7.0
 python-socketio==5.9.0
 werkzeug==2.2.3
-zipp==3.16.2
+zipp=3.15.0
