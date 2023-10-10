@@ -18,6 +18,7 @@ emails = []
 GAMES = {}
 GAME_PLAYERS = {}
 Player_arrangement = {}
+Total_online = 0
 
 TOURNAMENTS = {}
 TOURNAMENT_LIST = []
@@ -319,11 +320,13 @@ def login():
         username = data["username"]
         details = registered_users[username]
         if(data["password"] == details["password"]):
-            return jsonify({"success": True, "Username":username})
+            Total_online += 1
+            emit("log", {"Count": Total_online},namespace="/", broadcast=True)
+            return jsonify({"success": True, "Username":username, "Count": Total_online})
         return jsonify({"success": False, "Message": f"Incorrect password.Check and try again"})
     except KeyError:
         usr_name = data["username"]
-        return jsonify({"success": False, "Message": f"User with username {usr_name} exists."})
+        return jsonify({"success": False, "Message": f"User with username {usr_name} does not exist."})
 
 @app.route("/get_user/<string:username>", methods=["GET"])
 def get_user(username):
@@ -423,4 +426,4 @@ def disconnected():
     emit("disconnect",f"user {request.sid} disconnected",broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True,port=5001,host="0.0.0.0")
+    socketio.run(app, debug=False,port=5001,host="0.0.0.0")
