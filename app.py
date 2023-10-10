@@ -18,7 +18,7 @@ emails = []
 GAMES = {}
 GAME_PLAYERS = {}
 Player_arrangement = {}
-Total_online = 0
+LoggedInPlayers = {"Total_online": 0}
 
 TOURNAMENTS = {}
 TOURNAMENT_LIST = []
@@ -107,6 +107,8 @@ def pick_two(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
     GAME_DETAILS = GAMES[id]
+    arrangements = Player_arrangement[id]
+    curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
          return jsonify({"success" : False})
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
@@ -135,6 +137,8 @@ def pick_three(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
     GAME_DETAILS = GAMES[id]
+    arrangements = Player_arrangement[id]
+    curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
          return jsonify({"success" : False})
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
@@ -320,9 +324,11 @@ def login():
         username = data["username"]
         details = registered_users[username]
         if(data["password"] == details["password"]):
-            Total_online += 1
-            emit("log", {"Count": Total_online},namespace="/", broadcast=True)
-            return jsonify({"success": True, "Username":username, "Count": Total_online})
+            l_players = LoggedInPlayers['Total_online']
+            l_players += 1
+            LoggedInPlayers['Total_online'] = l_players
+            emit("log", {"Count": l_players},namespace="/", broadcast=True)
+            return jsonify({"success": True, "Username":username, "Count": l_players})
         return jsonify({"success": False, "Message": f"Incorrect password.Check and try again"})
     except KeyError:
         usr_name = data["username"]
