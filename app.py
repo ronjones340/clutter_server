@@ -190,13 +190,13 @@ def get_cards(curr_usr):
 def register():
     data = request.json
     try:
-        idx = usernames.index(data["username"])
-        usr_name = data["username"]
+        idx = usernames.index(data["phone"])
+        usr_name = data["phone"]
         return jsonify({"success": False, "Message": f"User with username {usr_name} exists."})
     except:
-        usernames.append(data["username"])
+        usernames.append(data["phone"])
         emails.append(data["email"])
-        username = data["username"]
+        username = data["phone"]
         data["balance"] = 100
         registered_users[username] = data
         return jsonify({"success": True})
@@ -321,7 +321,7 @@ def enter_game(id):
 def login():
     data = request.json
     try:
-        username = data["username"]
+        username = data["phone"]
         details = registered_users[username]
         if(data["password"] == details["password"]):
             l_players = LoggedInPlayers['Total_online']
