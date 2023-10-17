@@ -225,16 +225,29 @@ def get_cards(curr_usr):
 # def get_usr_cards(id):
 #     data = {'success': True, 'CARDS': USERS_CARD_DICT[id]}
 #     return jsonify(data)
-# @app.route("/verify/<string:id>", methods=["POST"])
-# def register():
-#     data = request.json
+
+@app.route("/verify/<string:phone>", methods=["POST"])
+def verify(phone):
+    data = request.json
+    OTP = data["OTP"]
+    try:
+        Saved_OTP = OTPS[phone]
+        if(str(Saved_OTP) == OTP):
+             return jsonify({"success": True})
+        else:
+            jsonify({"success": False, "Message": f"The verification code does not match."})
+    except KeyError:
+        return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
+
+
+
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
     try:
         idx = usernames.index(data["phone"])
         usr_name = data["phone"]
-        return jsonify({"success": False, "Message": f"User with username {usr_name} exists."})
+        return jsonify({"success": False, "Message": f"User with username {usr_name} does not exists."})
     except:
         usernames.append(data["phone"])
         emails.append(data["email"])
