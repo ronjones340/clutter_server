@@ -3,11 +3,15 @@ from flask_socketio import SocketIO,emit
 from flask_cors import CORS
 from random import shuffle, randint
 from uuid import uuid4
+from infobip_channels.sms.channel import SMSChannel
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'AEF25993SACTFUWOPLMSFEWUHJAFQLP9873!'
 CORS(app,resources={r"/*":{"origins":"*"}})
 socketio = SocketIO(app,cors_allowed_origins="*")
+
+API_KEY = "c419e63bfe1c78c294632dedba6bdcd0-052291eb-959b-47c2-b7f2-eb8a249d54b6"
+OTP_URL = "w11qj8.api.infobip.com"
 
 
 USER_COMM_DETAILS = {}
@@ -27,6 +31,42 @@ USERNAME_TO_USR_DICT = {}
 USR_TO_USERNAME = {}
 
 Games_list = []
+OTPS = {}
+
+channel = SMSChannel.from_auth_params(
+    {
+        "base_url": OTP_URL,
+        "api_key": API_KEY,
+    }
+)
+
+def get_OTP():
+    return (randint(1,9) * 1000) + (randint(1,9) * 100) + (randint(1,9) * 10)
+
+def join(list_):
+    f = "254"
+    for i in list_:
+        f += i
+    return f
+
+def push_OTP(OTP, RECIPIENT):
+    RECIPIENT = str(RECIPIENT)
+    if(RECIPIENT.startswith("0")):
+        RECIPIENT = list(RECIPIENT)
+        RECIPIENT.pop(0)
+        RECIPIENT = join(RECIPIENT)
+    sms_response = channel.send_sms_message(
+    {
+        "messages": [
+            {
+                "destinations": [{"to": RECIPIENT}],
+                "text": f"Your Clutter verification otp is - {OTP}",
+            }
+        ]
+    }
+    )
+    query_parameters = {"limit": 10}
+    delivery_reports = channel.get_outbound_sms_delivery_reports(query_parameters)
 
 def myfunction():
     x = (randint(1,3) / randint(4,9))
@@ -185,7 +225,9 @@ def get_cards(curr_usr):
 # def get_usr_cards(id):
 #     data = {'success': True, 'CARDS': USERS_CARD_DICT[id]}
 #     return jsonify(data)
-
+# @app.route("/verify/<string:id>", methods=["POST"])
+# def register():
+#     data = request.json
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
@@ -199,6 +241,9 @@ def register():
         username = data["phone"]
         data["balance"] = 100
         registered_users[username] = data
+        User_OTP = get_OTP()
+        OTPS[data["phone"]] = User_OTP
+        push_OTP(User_OTP)
         return jsonify({"success": True})
 
 @app.route("/create_game", methods=["POST"])
