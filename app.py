@@ -271,6 +271,7 @@ def create_game():
     data["Id"] = game_id
     data["Top"] = Top
     data["Cards"] = cards_dict
+    data["Is_Tournament"] = False
     data["Pick_Deck"] = Pick_Deck
     data["Current_player"] = ""
     data["Dropped"] = []
@@ -297,7 +298,9 @@ def create_tournament():
         new_game = {}
         new_game["Id"] = game_id
         new_game["Tournament"] = tourament_id
+        new_game["Is_Tournament"] = True
         new_game["players"] = 4
+        new_game["start_date"] = f"{randint(1,30)}/{randint(3,12)}/2023"
         new_game["registered_players"] = []
         new_game["Tittle"] = f"{name} - Game {i + 1}/{groups}"
         GAMES[game_id] = new_game
@@ -306,6 +309,7 @@ def create_tournament():
 
     data["games"] = created_games
     data["Id"] = tourament_id
+    data["Is_on"] = False
     TOURNAMENTS[tourament_id] = data
     TOURNAMENT_LIST.append(data)
 
