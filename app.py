@@ -389,8 +389,7 @@ def login():
             return jsonify({"success": True, "Username":username, "Count": l_players})
         return jsonify({"success": False, "Message": f"Incorrect password.Check and try again"})
     except KeyError:
-        usr_name = data["username"]
-        return jsonify({"success": False, "Message": f"User with username {usr_name} does not exist."})
+        return jsonify({"success": False, "Message": f"User does not exist."})
 
 @app.route("/get_user/<string:username>", methods=["GET"])
 def get_user(username):
