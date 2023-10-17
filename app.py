@@ -243,7 +243,7 @@ def register():
         registered_users[username] = data
         User_OTP = get_OTP()
         OTPS[data["phone"]] = User_OTP
-        push_OTP(User_OTP)
+        push_OTP(User_OTP, data["phone"])
         return jsonify({"success": True})
 
 @app.route("/create_game", methods=["POST"])
