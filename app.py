@@ -247,13 +247,13 @@ def register():
     try:
         idx = usernames.index(data["phone"])
         usr_name = data["phone"]
-        return jsonify({"success": False, "Message": f"User with username {usr_name} does not exists."})
+        return jsonify({"success": False, "Message": f"User with username {usr_name} exists."})
     except:
         usernames.append(data["phone"])
         emails.append(data["email"])
-        username = data["phone"]
+        username = data["username"]
         data["balance"] = 100
-        registered_users[username] = data
+        registered_users[data["phone"]] = data
         User_OTP = get_OTP()
         OTPS[data["phone"]] = User_OTP
         push_OTP(User_OTP, data["phone"])
