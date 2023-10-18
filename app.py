@@ -32,6 +32,7 @@ USR_TO_USERNAME = {}
 
 Games_list = []
 OTPS = {}
+TOTAL_GAMES = 0
 
 channel = SMSChannel.from_auth_params(
     {
@@ -41,7 +42,7 @@ channel = SMSChannel.from_auth_params(
 )
 
 def get_OTP():
-    return (randint(1,9) * 1000) + (randint(1,9) * 100) + (randint(1,9) * 10)
+    return (randint(1,9) * 1000) + (randint(1,9) * 100) + (randint(1,9) * 10) + randint(1,9)
 
 def join(list_):
     f = "254"
@@ -300,6 +301,8 @@ def create_tournament():
         new_game["Tournament"] = tourament_id
         new_game["Is_Tournament"] = True
         new_game["players"] = 4
+        new_game["stake"] = data["stake"]
+        data["Current_player"] = ""
         new_game["start_date"] = f"{randint(1,30)}/{randint(3,12)}/2023"
         new_game["registered_players"] = []
         new_game["Tittle"] = f"{name} - Game {i + 1}/{groups}"
