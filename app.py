@@ -131,7 +131,7 @@ USR_CLASS_OBJECT = USR_CLASS()
 
 @app.route("/get_deck/<string:id>")
 def get_deck(id):
-    Game = GAMES[id]
+    Game = GAMES_collection.find_one({"id": id})
     PickDeck = Game["Pick_Deck"]
     return jsonify({"DECK":PickDeck, "Top": Game["Top"]})
 
@@ -417,24 +417,24 @@ def enter_game(id):
     try:
         # GAME_DETAILS = GAMES[id]
         GAME_DETAILS = GAMES_collection.find_one({"id": id})
-        players = GAME_PLAYERS[id]
+        players = list(GAMES_PLAYERS_collection.find({"game_id": id}))
         player_idx = len(players)
         usr_id = 'USR_' + str(len(players)) + '_CARDS'
         data = request.json
         if(len(players) >=  int(GAME_DETAILS["players"]) and data["username"] not in players):
             Is_allowed["Value"] = True
             return jsonify({"success": False, "Message": "Game is at maximum capacity"})
-        
-        if(data["username"] in players):
+        res = GAMES_PLAYERS_collection.find_one({"player": data["username"]})
+        if(res):
             return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
-            GAME_DETAILS["Current_player"] = data["username"]
-            GAMES_collection.insert_one(GAME_DETAILS)
+            GAMES_collection.update_one({"id": id},{"$set": {"Current_player": data["username"]}})
             # GAMES[id] = GAME_DETAILS
-        players.append(data["username"])
+        GAMES_PLAYERS_collection.insert_one({"game_id": id,"player": data["username"]})
+        # players.append(data["username"])
         arrangement = next_player_arrangement(players.copy(), int(GAME_DETAILS["players"]), 0, {})
         USERNAME_TO_USR_DICT[data["username"]] = usr_id
-        GAME_PLAYERS[id] = players
+        # GAME_PLAYERS[id] = players
         Player_arrangement[id] = arrangement
         return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
 
@@ -463,8 +463,12 @@ def get_user(username):
 
 @app.route("/get_players/<string:id>", methods=["GET"])
 def get_players(id):
-    players = GAME_PLAYERS[id]
-    return jsonify({"success": True, "Players":players})
+    players = GAMES_PLAYERS_collection.find({"game_id": id})
+    all_players = []
+    for player in players:
+        player["_id"] = str(player["_id"])
+        all_players.append(player)
+    return jsonify({"success": True, "Players":all_players})
 
 @app.route("/set_comm_data/<string:usr>", methods=["POST"])
 def set_comm_data(usr):
@@ -472,12 +476,18 @@ def set_comm_data(usr):
     USER_COMM_DETAILS[usr] = {"id": data["id"], "namespace": data["namespace"]}
     return jsonify({"id": data["id"], "namespace": data["namespace"]})
 
+def get_player_idx(player_det, cursor):
+    i = 0
+    for player in cursor:
+        if(player["player"] == player_det):
+            return i
+        
 @app.route("/handle_drop/<string:card_id>", methods=["POST"])
 def handle_drop(card_id):
     data = request.json
     pick_size = 1
-    players = GAME_PLAYERS[data["game_id"]]
-    idx = players.index(data["USR"])
+    players = GAMES_PLAYERS_collection.find({"game_id": id})
+    idx = get_player_idx(data["USR"], players)
     GAME_DETAILS = GAMES_collection.find_one({"id": data["game_id"]})
     Dropped = GAME_DETAILS["Dropped"]
     USER_CARDS_DICT = GAME_DETAILS["Cards"]
