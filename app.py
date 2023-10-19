@@ -4,7 +4,6 @@ from flask_cors import CORS
 from random import shuffle, randint
 from uuid import uuid4
 from infobip_channels.sms.channel import SMSChannel
-from flask_pymongo import PyMongo
 from pymongo.mongo_client import MongoClient
 # from pymongo import MongoClient
 
