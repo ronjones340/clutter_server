@@ -131,7 +131,7 @@ USR_CLASS_OBJECT = USR_CLASS()
 
 @app.route("/get_deck/<string:id>")
 def get_deck(id):
-    Game = GAMES_collection.find_one({"id": id})
+    Game = GAMES_collection.find_one({"Id": id})
     PickDeck = Game["Pick_Deck"]
     return jsonify({"DECK":PickDeck, "Top": Game["Top"]})
 
@@ -139,7 +139,7 @@ def get_deck(id):
 def pick_single(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
-    GAME_DETAILS = GAMES_collection.find_one({"id": id})
+    GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
@@ -159,7 +159,7 @@ def pick_single(id):
     # GAME_DETAILS["Pick_Deck"] = CARD_Numbers
     # GAME_DETAILS["Dropped"] = []
     # GAMES[id] = GAME_DETAILS
-    GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
+    GAMES_collection.update_one({"Id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
     emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
     return jsonify({"CARDS" : user_cards, 'success': True,'PICKS': CARD_Numbers})
 
@@ -168,7 +168,7 @@ def pick_two(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
     # GAME_DETAILS = GAMES[id]
-    GAME_DETAILS = GAMES_collection.find_one({"id": id})
+    GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
@@ -189,7 +189,7 @@ def pick_two(id):
         GAME_DETAILS["Cards"] = USERS_CARD_DICT
         GAME_DETAILS["Pick_Deck"] = CARD_Numbers
         GAME_DETAILS["Dropped"] = []
-        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
+        GAMES_collection.update_one({"Id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
     else:
         user_cards.append(CARD_Numbers[0])
         user_cards.append(CARD_Numbers[1])
@@ -198,7 +198,7 @@ def pick_two(id):
         USERS_CARD_DICT[usr_id] = user_cards
         GAME_DETAILS["Cards"] = USERS_CARD_DICT
         GAME_DETAILS["Pick_Deck"] = CARD_Numbers
-        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT,"Pick_Deck": CARD_Numbers }})
+        GAMES_collection.update_one({"Id": id},{"$set": { "Cards": USERS_CARD_DICT,"Pick_Deck": CARD_Numbers }})
     # GAMES[id] = GAME_DETAILS
     emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
     return jsonify({"CARDS" : user_cards,  "success": True,'PICKS': CARD_Numbers})
@@ -209,7 +209,7 @@ def pick_three(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
     # GAME_DETAILS = GAMES[id]
-    GAME_DETAILS = GAMES_collection.find_one({"id": id})
+    GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
@@ -231,7 +231,7 @@ def pick_three(id):
         GAME_DETAILS["Cards"] = USERS_CARD_DICT
         GAME_DETAILS["Pick_Deck"] = CARD_Numbers
         GAME_DETAILS["Dropped"] = []
-        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
+        GAMES_collection.update_one({"Id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
     else:
         user_cards.append(CARD_Numbers[0])
         user_cards.append(CARD_Numbers[1])
@@ -242,7 +242,7 @@ def pick_three(id):
         USERS_CARD_DICT[usr_id] = user_cards
         GAME_DETAILS["Cards"] = USERS_CARD_DICT
         GAME_DETAILS["Pick_Deck"] = CARD_Numbers
-        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT,"Pick_Deck": CARD_Numbers }})
+        GAMES_collection.update_one({"Id": id},{"$set": { "Cards": USERS_CARD_DICT,"Pick_Deck": CARD_Numbers }})
     # GAMES[id] = GAME_DETAILS
     emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
     return jsonify({"CARDS" : user_cards, "success": True,'PICKS': CARD_Numbers})
@@ -259,7 +259,7 @@ def pick_three(id):
 def get_cards(curr_usr):
     data = request.json
     # GAME_DETAILS = GAMES[data["game_id"]]
-    GAME_DETAILS = GAMES_collection.find_one({"id": data["game_id"]})
+    GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
     arrangement = Player_arrangement[data["game_id"]]
     
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
@@ -395,7 +395,7 @@ def get_game(id):
 @app.route("/get_current_player/<string:id>", methods=["GET"])
 def get_current_player(id):
     # GAME_DETAILS = GAMES[id]
-    GAME_DETAILS = GAMES_collection.find_one({"id": id})
+    GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     return jsonify({"Current_player":GAME_DETAILS["Current_player"]})
 
 def next_player_arrangement(players, size, i=0, arrangement={}):
@@ -416,7 +416,7 @@ def next_player_arrangement(players, size, i=0, arrangement={}):
 def enter_game(id):
     try:
         # GAME_DETAILS = GAMES[id]
-        GAME_DETAILS = GAMES_collection.find_one({"id": id})
+        GAME_DETAILS = GAMES_collection.find_one({"Id": id})
         players = list(GAMES_PLAYERS_collection.find({"game_id": id}))
         player_idx = len(players)
         usr_id = 'USR_' + str(len(players)) + '_CARDS'
@@ -428,7 +428,7 @@ def enter_game(id):
         if(res):
             return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
-            GAMES_collection.update_one({"id": id},{"$set": {"Current_player": data["username"]}})
+            GAMES_collection.update_one({"Id": id},{"$set": {"Current_player": data["username"]}})
             # GAMES[id] = GAME_DETAILS
         GAMES_PLAYERS_collection.insert_one({"game_id": id,"player": data["username"]})
         # players.append(data["username"])
@@ -488,7 +488,7 @@ def handle_drop(card_id):
     pick_size = 1
     players = GAMES_PLAYERS_collection.find({"game_id": id})
     idx = get_player_idx(data["USR"], players)
-    GAME_DETAILS = GAMES_collection.find_one({"id": data["game_id"]})
+    GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
     Dropped = GAME_DETAILS["Dropped"]
     USER_CARDS_DICT = GAME_DETAILS["Cards"]
     usr_id = USERNAME_TO_USR_DICT[data["USR"]]
@@ -537,7 +537,7 @@ def handle_drop(card_id):
     # GAME_DETAILS["Dropped"] = Dropped
     # GAME_DETAILS["Current_player"] = next_player
     # GAMES[data["game_id"]] = GAME_DETAILS
-    GAMES_collection.update_one({"id": data["game_id"]}, {"$set" : {"Current_player": next_player,"Dropped": Dropped,"Top": int(card_id),"Cards": USER_CARDS_DICT}})
+    GAMES_collection.update_one({"Id": data["game_id"]}, {"$set" : {"Current_player": next_player,"Dropped": Dropped,"Top": int(card_id),"Cards": USER_CARDS_DICT}})
     
 
     return jsonify({"Card_Id": int(card_id), "next_player": next_player})
