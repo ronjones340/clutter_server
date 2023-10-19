@@ -367,8 +367,12 @@ def create_tournament():
 
 @app.route("/get_games", methods=["GET"])
 def get_games():
-    Games_list = GAMES_collection.find()
-    return jsonify({"success": True, "games": list(Games_list)})
+    Games_list = GAMES_collection.find({})
+    all = []
+    for item in Games_list:
+        item["_id"] = str(item["_id"])
+        all.append(item)
+    return jsonify({"success": True, "games": all})
 
 @app.route("/get_tournaments", methods=["GET"])
 def get_tournaments():
