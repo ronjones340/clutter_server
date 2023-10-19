@@ -4,14 +4,25 @@ from flask_cors import CORS
 from random import shuffle, randint
 from uuid import uuid4
 from infobip_channels.sms.channel import SMSChannel
+from flask_pymongo import PyMongo
+from pymongo.mongo_client import MongoClient
+# from pymongo import MongoClient
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'AEF25993SACTFUWOPLMSFEWUHJAFQLP9873!'
+app.config['MONGO_URI'] = "mongodb+srv://ronjones8417:Emmanu3l698@cluster0.alreawj.mongodb.net/?retryWrites=true&w=majority"
 CORS(app,resources={r"/*":{"origins":"*"}})
+
+client = MongoClient("mongodb+srv://ronjones8417:Emmanu3l698@cluster0.alreawj.mongodb.net/?retryWrites=true&w=majority",connect=False)
+db = client['Clutter']
+
 socketio = SocketIO(app,cors_allowed_origins="*")
+# mongo = PyMongo(app)
 
 API_KEY = "c419e63bfe1c78c294632dedba6bdcd0-052291eb-959b-47c2-b7f2-eb8a249d54b6"
 OTP_URL = "w11qj8.api.infobip.com"
+
+# print(client.list_database_names())
 
 
 USER_COMM_DETAILS = {}
@@ -23,6 +34,7 @@ GAMES = {}
 GAME_PLAYERS = {}
 Player_arrangement = {}
 LoggedInPlayers = {"Total_online": 0}
+Is_allowed = {"Value": True}
 
 TOURNAMENTS = {}
 TOURNAMENT_LIST = []
@@ -33,6 +45,13 @@ USR_TO_USERNAME = {}
 Games_list = []
 OTPS = {}
 TOTAL_GAMES = 0
+
+GAMES_collection = db["GAMES"]
+GAMES_PLAYERS_collection = db["GAMES_PLAYERS"]
+USER_COMM_DETAIL_collection = db["USER_COMM_DETAIL"]
+OTPS_collection = db["OTPS"]
+Users_collection =  db["USERS"]
+TOURNAMENTS_collection = db["TOURNAMENTS"]
 
 channel = SMSChannel.from_auth_params(
     {
@@ -120,7 +139,7 @@ def get_deck(id):
 def pick_single(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
-    GAME_DETAILS = GAMES[id]
+    GAME_DETAILS = GAMES_collection.find_one({"id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
@@ -135,11 +154,12 @@ def pick_single(id):
         shuffle(CARD_Numbers, myfunction)
     user_cards.append(CARD_Numbers[0])
     CARD_Numbers.pop(0)
-    USERS_CARD_DICT[usr_id] = user_cards
-    GAME_DETAILS["Cards"] = USERS_CARD_DICT
-    GAME_DETAILS["Pick_Deck"] = CARD_Numbers
-    GAME_DETAILS["Dropped"] = []
-    GAMES[id] = GAME_DETAILS
+    # USERS_CARD_DICT[usr_id] = user_cards
+    # GAME_DETAILS["Cards"] = USERS_CARD_DICT
+    # GAME_DETAILS["Pick_Deck"] = CARD_Numbers
+    # GAME_DETAILS["Dropped"] = []
+    # GAMES[id] = GAME_DETAILS
+    GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
     emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
     return jsonify({"CARDS" : user_cards, 'success': True,'PICKS': CARD_Numbers})
 
@@ -147,7 +167,8 @@ def pick_single(id):
 def pick_two(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
-    GAME_DETAILS = GAMES[id]
+    # GAME_DETAILS = GAMES[id]
+    GAME_DETAILS = GAMES_collection.find_one({"id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
@@ -160,15 +181,25 @@ def pick_two(id):
     if(len(CARD_Numbers) < 3):
         CARD_Numbers.extend(dropped)
         shuffle(CARD_Numbers, myfunction)
-    user_cards.append(CARD_Numbers[0])
-    user_cards.append(CARD_Numbers[1])
-    CARD_Numbers.pop(0)
-    CARD_Numbers.pop(0)
-    USERS_CARD_DICT[usr_id] = user_cards
-    GAME_DETAILS["Cards"] = USERS_CARD_DICT
-    GAME_DETAILS["Pick_Deck"] = CARD_Numbers
-    GAME_DETAILS["Dropped"] = []
-    GAMES[id] = GAME_DETAILS
+        user_cards.append(CARD_Numbers[0])
+        user_cards.append(CARD_Numbers[1])
+        CARD_Numbers.pop(0)
+        CARD_Numbers.pop(0)
+        USERS_CARD_DICT[usr_id] = user_cards
+        GAME_DETAILS["Cards"] = USERS_CARD_DICT
+        GAME_DETAILS["Pick_Deck"] = CARD_Numbers
+        GAME_DETAILS["Dropped"] = []
+        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
+    else:
+        user_cards.append(CARD_Numbers[0])
+        user_cards.append(CARD_Numbers[1])
+        CARD_Numbers.pop(0)
+        CARD_Numbers.pop(0)
+        USERS_CARD_DICT[usr_id] = user_cards
+        GAME_DETAILS["Cards"] = USERS_CARD_DICT
+        GAME_DETAILS["Pick_Deck"] = CARD_Numbers
+        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT,"Pick_Deck": CARD_Numbers }})
+    # GAMES[id] = GAME_DETAILS
     emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
     return jsonify({"CARDS" : user_cards,  "success": True,'PICKS': CARD_Numbers})
 
@@ -177,7 +208,8 @@ def pick_two(id):
 def pick_three(id):
     data = request.json
     usr_id = USERNAME_TO_USR_DICT[data["username"]]
-    GAME_DETAILS = GAMES[id]
+    # GAME_DETAILS = GAMES[id]
+    GAME_DETAILS = GAMES_collection.find_one({"id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
@@ -189,17 +221,29 @@ def pick_three(id):
     if(len(CARD_Numbers) < 4):
         CARD_Numbers.extend(dropped)
         shuffle(CARD_Numbers, myfunction)
-    user_cards.append(CARD_Numbers[0])
-    user_cards.append(CARD_Numbers[1])
-    user_cards.append(CARD_Numbers[2])
-    CARD_Numbers.pop(0)
-    CARD_Numbers.pop(0)
-    CARD_Numbers.pop(0)
-    USERS_CARD_DICT[usr_id] = user_cards
-    GAME_DETAILS["Cards"] = USERS_CARD_DICT
-    GAME_DETAILS["Pick_Deck"] = CARD_Numbers
-    GAME_DETAILS["Dropped"] = []
-    GAMES[id] = GAME_DETAILS
+        user_cards.append(CARD_Numbers[0])
+        user_cards.append(CARD_Numbers[1])
+        user_cards.append(CARD_Numbers[2])
+        CARD_Numbers.pop(0)
+        CARD_Numbers.pop(0)
+        CARD_Numbers.pop(0)
+        USERS_CARD_DICT[usr_id] = user_cards
+        GAME_DETAILS["Cards"] = USERS_CARD_DICT
+        GAME_DETAILS["Pick_Deck"] = CARD_Numbers
+        GAME_DETAILS["Dropped"] = []
+        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
+    else:
+        user_cards.append(CARD_Numbers[0])
+        user_cards.append(CARD_Numbers[1])
+        user_cards.append(CARD_Numbers[2])
+        CARD_Numbers.pop(0)
+        CARD_Numbers.pop(0)
+        CARD_Numbers.pop(0)
+        USERS_CARD_DICT[usr_id] = user_cards
+        GAME_DETAILS["Cards"] = USERS_CARD_DICT
+        GAME_DETAILS["Pick_Deck"] = CARD_Numbers
+        GAMES_collection.update_one({"id": id},{"$set": { "Cards": USERS_CARD_DICT,"Pick_Deck": CARD_Numbers }})
+    # GAMES[id] = GAME_DETAILS
     emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
     return jsonify({"CARDS" : user_cards, "success": True,'PICKS': CARD_Numbers})
 
@@ -214,7 +258,8 @@ def pick_three(id):
 @app.route("/get_cards/<string:curr_usr>", methods=["POST"])
 def get_cards(curr_usr):
     data = request.json
-    GAME_DETAILS = GAMES[data["game_id"]]
+    # GAME_DETAILS = GAMES[data["game_id"]]
+    GAME_DETAILS = GAMES_collection.find_one({"id": data["game_id"]})
     arrangement = Player_arrangement[data["game_id"]]
     
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
@@ -231,34 +276,32 @@ def get_cards(curr_usr):
 def verify(phone):
     data = request.json
     OTP = data["OTP"]
-    try:
-        Saved_OTP = OTPS[phone]
-        if(str(Saved_OTP) == OTP):
-             return jsonify({"success": True})
-        else:
-            jsonify({"success": False, "Message": f"The verification code does not match."})
-    except KeyError:
-        return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
-
+    res = OTPS_collection.find_one({"phone": phone})
+    if(res):
+        if(res["OTP"] == OTP):
+            return jsonify({"success": True})
+        return jsonify({"success": False, "Message": f"The verification code does not match."})
+    return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
 
 
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
-    try:
-        idx = usernames.index(data["phone"])
-        usr_name = data["phone"]
-        return jsonify({"success": False, "Message": f"User with username {usr_name} exists."})
-    except:
-        usernames.append(data["phone"])
-        emails.append(data["email"])
-        username = data["username"]
+    res = Users_collection.find_one({"phone": data["phone"] })
+    if(res):
+        usr = res["username"]
+        return jsonify({"success": False, "Message": f"User with username {usr} exists."})
+    else:
         data["balance"] = 100
-        registered_users[data["phone"]] = data
         User_OTP = get_OTP()
-        OTPS[data["phone"]] = User_OTP
+        OTP_DICT = {}
+        OTP_DICT["OTP"] = User_OTP
+        OTP_DICT["phone"] = data["phone"]
         push_OTP(User_OTP, data["phone"])
+        OTPS_collection.insert_one(OTP_DICT)
+        Users_collection.insert_one(data)
         return jsonify({"success": True})
+
 
 @app.route("/create_game", methods=["POST"])
 def create_game():
@@ -279,7 +322,11 @@ def create_game():
     GAMES[game_id] = data
     GAME_PLAYERS[game_id] = []
     Games_list.append(data)
-    return jsonify({"success": True, "game_id": game_id})
+    if(Is_allowed["Value"]):
+        GAMES_collection.insert_one(data)
+        Is_allowed["Value"] = False
+        return jsonify({"success": True, "game_id": game_id})
+    return jsonify({"success": False, "Message": "You are not allowed to create another game befor the others are full"})
 
 
 @app.route("/create_tournament", methods=["POST"])
@@ -320,7 +367,8 @@ def create_tournament():
 
 @app.route("/get_games", methods=["GET"])
 def get_games():
-    return jsonify({"success": True, "games": Games_list})
+    Games_list = GAMES_collection.find()
+    return jsonify({"success": True, "games": list(Games_list)})
 
 @app.route("/get_tournaments", methods=["GET"])
 def get_tournaments():
@@ -334,12 +382,14 @@ def get_tournament_games(id):
 
 @app.route("/get_game/<string:id>", methods=["GET"])
 def get_game(id):
-    GAME_DETAILS = GAMES[id]
+    GAME_DETAILS = GAMES_collection.find_one({"Id": id})
+    GAME_DETAILS["_id"] = str(GAME_DETAILS["_id"])
     return jsonify({"success": True, "game": GAME_DETAILS})
 
 @app.route("/get_current_player/<string:id>", methods=["GET"])
 def get_current_player(id):
-    GAME_DETAILS = GAMES[id]
+    # GAME_DETAILS = GAMES[id]
+    GAME_DETAILS = GAMES_collection.find_one({"id": id})
     return jsonify({"Current_player":GAME_DETAILS["Current_player"]})
 
 def next_player_arrangement(players, size, i=0, arrangement={}):
@@ -359,19 +409,22 @@ def next_player_arrangement(players, size, i=0, arrangement={}):
 @app.route("/enter_game/<string:id>", methods=["POST"])
 def enter_game(id):
     try:
-        GAME_DETAILS = GAMES[id]
+        # GAME_DETAILS = GAMES[id]
+        GAME_DETAILS = GAMES_collection.find_one({"id": id})
         players = GAME_PLAYERS[id]
         player_idx = len(players)
         usr_id = 'USR_' + str(len(players)) + '_CARDS'
         data = request.json
         if(len(players) >=  int(GAME_DETAILS["players"]) and data["username"] not in players):
+            Is_allowed["Value"] = True
             return jsonify({"success": False, "Message": "Game is at maximum capacity"})
         
         if(data["username"] in players):
             return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
             GAME_DETAILS["Current_player"] = data["username"]
-            GAMES[id] = GAME_DETAILS
+            GAMES_collection.insert_one(GAME_DETAILS)
+            # GAMES[id] = GAME_DETAILS
         players.append(data["username"])
         arrangement = next_player_arrangement(players.copy(), int(GAME_DETAILS["players"]), 0, {})
         USERNAME_TO_USR_DICT[data["username"]] = usr_id
@@ -385,23 +438,22 @@ def enter_game(id):
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
-    try:
-        username = data["phone"]
-        details = registered_users[username]
-        if(data["password"] == details["password"]):
+    res = Users_collection.find_one({"phone": data["phone"] })
+    if(res):
+        if(res["password"] == data["password"]):
             l_players = LoggedInPlayers['Total_online']
             l_players += 1
             LoggedInPlayers['Total_online'] = l_players
             emit("log", {"Count": l_players},namespace="/", broadcast=True)
-            return jsonify({"success": True, "Username":username, "Count": l_players})
+            return jsonify({"success": True, "Username":data["phone"], "Count": l_players})
         return jsonify({"success": False, "Message": f"Incorrect password.Check and try again"})
-    except KeyError:
-        return jsonify({"success": False, "Message": f"User does not exist."})
+    return jsonify({"success": False, "Message": f"User does not exist."})
 
 @app.route("/get_user/<string:username>", methods=["GET"])
 def get_user(username):
-    details = registered_users[username]
-    return jsonify({"success": True, "user":details})
+    res = Users_collection.find_one({"phone": username})
+    res["_id"] = str(res["_id"])
+    return jsonify({"success": True, "user":res})
 
 @app.route("/get_players/<string:id>", methods=["GET"])
 def get_players(id):
@@ -420,7 +472,7 @@ def handle_drop(card_id):
     pick_size = 1
     players = GAME_PLAYERS[data["game_id"]]
     idx = players.index(data["USR"])
-    GAME_DETAILS = GAMES[data["game_id"]]
+    GAME_DETAILS = GAMES_collection.find_one({"id": data["game_id"]})
     Dropped = GAME_DETAILS["Dropped"]
     USER_CARDS_DICT = GAME_DETAILS["Cards"]
     usr_id = USERNAME_TO_USR_DICT[data["USR"]]
@@ -464,11 +516,13 @@ def handle_drop(card_id):
         emit("onCard", {"Player": data["USR"], "index": idx},namespace="/", broadcast=True)
     emit("setPlayer", {"player": next_player},namespace="/", broadcast=True)
     USER_CARDS_DICT[usr_id] = User_cards
-    GAME_DETAILS["Cards"] = USER_CARDS_DICT
-    GAME_DETAILS["Top"] = int(card_id)
-    GAME_DETAILS["Dropped"] = Dropped
-    GAME_DETAILS["Current_player"] = next_player
-    GAMES[data["game_id"]] = GAME_DETAILS
+    # GAME_DETAILS["Cards"] = USER_CARDS_DICT
+    # GAME_DETAILS["Top"] = int(card_id)
+    # GAME_DETAILS["Dropped"] = Dropped
+    # GAME_DETAILS["Current_player"] = next_player
+    # GAMES[data["game_id"]] = GAME_DETAILS
+    GAMES_collection.update_one({"id": data["game_id"]}, {"$set" : {"Current_player": next_player,"Dropped": Dropped,"Top": int(card_id),"Cards": USER_CARDS_DICT}})
+    
 
     return jsonify({"Card_Id": int(card_id), "next_player": next_player})
 
