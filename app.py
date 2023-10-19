@@ -51,6 +51,7 @@ USER_COMM_DETAIL_collection = db["USER_COMM_DETAIL"]
 OTPS_collection = db["OTPS"]
 Users_collection =  db["USERS"]
 TOURNAMENTS_collection = db["TOURNAMENTS"]
+GAMES_CONSTANT_collection =  db["GAMES_CONSTANTS"]
 
 channel = SMSChannel.from_auth_params(
     {
@@ -322,11 +323,12 @@ def create_game():
     GAMES[game_id] = data
     GAME_PLAYERS[game_id] = []
     Games_list.append(data)
-    if(Is_allowed["Value"]):
+    res = GAMES_CONSTANT_collection.find_one({"Tittle": "Is_Allowed"})
+    if(res["Is_Allowed"]):
         GAMES_collection.insert_one(data)
-        Is_allowed["Value"] = False
+        GAMES_CONSTANT_collection.update_one({"Is_allowed": True}, {"$set": {"Is_allowed": False}})
         return jsonify({"success": True, "game_id": game_id})
-    return jsonify({"success": False, "Message": "You are not allowed to create another game befor the others are full"})
+    return jsonify({"success": False, "Message": "You are not allowed to create another game before the others are full"})
 
 
 @app.route("/create_tournament", methods=["POST"])
