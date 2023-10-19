@@ -318,6 +318,7 @@ def create_game():
     data["Pick_Deck"] = Pick_Deck
     data["Current_player"] = ""
     data["Dropped"] = []
+    data["Tittle"] = f"Game_00{randint(0,37)}"
     GAMES[game_id] = data
     GAME_PLAYERS[game_id] = []
     Games_list.append(data)
