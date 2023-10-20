@@ -411,6 +411,11 @@ def next_player_arrangement(players, size, i=0, arrangement={}):
     new_players.append(player)
     return next_player_arrangement(new_players, size, i, arrangement)
 
+def find_me(list_, me):
+    for p in list_:
+        if(p["player"] == me):
+            return True
+    return False
 
 @app.route("/enter_game/<string:id>", methods=["POST"])
 def enter_game(id):
@@ -428,14 +433,13 @@ def enter_game(id):
             players_cl.append(plyr)
         players = players_cl
         
-        if(len(players) >=  int(GAME_DETAILS["players"]) and data["username"] not in players):
+        if(len(players) >=  int(GAME_DETAILS["players"]) and not find_me(players, data["username"])):
             Is_allowed["Value"] = True
             return jsonify({"success": False, "Message": "Game is at maximum capacity"})
         res = GAMES_PLAYERS_collection.find_one({"player": data["username"]})
         if(res):
             return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
-            print(GAME_DETAILS["Current_player"], data["username"])
             GAMES_collection.update_one({"Id": id},{"$set": {"Current_player": data["username"]}})
             # GAMES[id] = GAME_DETAILS
         GAMES_PLAYERS_collection.insert_one({"game_id": id,"player": data["username"]})
