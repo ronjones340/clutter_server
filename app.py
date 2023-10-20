@@ -406,7 +406,7 @@ def next_player_arrangement(players, size, i=0, arrangement={}):
     player = players[0]
     players.pop(0)
     new_players = players.copy()
-    arrangement[player] = players
+    arrangement[player["player"]] = players
     i += 1
     new_players.append(player)
     return next_player_arrangement(new_players, size, i, arrangement)
@@ -418,9 +418,16 @@ def enter_game(id):
         # GAME_DETAILS = GAMES[id]
         GAME_DETAILS = GAMES_collection.find_one({"Id": id})
         players = list(GAMES_PLAYERS_collection.find({"game_id": id}))
+        player_count = len(players)
         player_idx = len(players)
         usr_id = 'USR_' + str(len(players)) + '_CARDS'
         data = request.json
+        players_cl = []
+        for plyr in players:
+            plyr["_id"] = str(plyr["_id"]) 
+            players_cl.append(plyr)
+        players = players_cl
+        
         if(len(players) >=  int(GAME_DETAILS["players"]) and data["username"] not in players):
             Is_allowed["Value"] = True
             return jsonify({"success": False, "Message": "Game is at maximum capacity"})
@@ -428,6 +435,7 @@ def enter_game(id):
         if(res):
             return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
+            print(GAME_DETAILS["Current_player"], data["username"])
             GAMES_collection.update_one({"Id": id},{"$set": {"Current_player": data["username"]}})
             # GAMES[id] = GAME_DETAILS
         GAMES_PLAYERS_collection.insert_one({"game_id": id,"player": data["username"]})
@@ -436,7 +444,8 @@ def enter_game(id):
         USERNAME_TO_USR_DICT[data["username"]] = usr_id
         # GAME_PLAYERS[id] = players
         Player_arrangement[id] = arrangement
-        return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
+        # 
+        return jsonify({"success": True, "Current_player": GAME_DETAILS["Current_player"],"player_pos": player_idx,"game_id": id, "Players": player_count + 1, "All_Player": players})
 
     except ValueError:
         return jsonify({"success": False, "Message": "Game not found"})
