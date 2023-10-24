@@ -50,8 +50,11 @@ GAMES_PLAYERS_collection = db["GAMES_PLAYERS"]
 USER_COMM_DETAIL_collection = db["USER_COMM_DETAIL"]
 OTPS_collection = db["OTPS"]
 Users_collection =  db["USERS"]
+Player_Arrangement_collection =  db["PLAYER_ARRANGEMENT"]
 TOURNAMENTS_collection = db["TOURNAMENTS"]
 GAMES_CONSTANT_collection =  db["GAMES_CONSTANTS"]
+USERNAME_TO_USR_DICT_collection = db["USERNAME_TO_USR_DICT"]
+Waiting_Users_collection =  db["WAITING_USERS"]
 
 channel = SMSChannel.from_auth_params(
     {
@@ -260,10 +263,11 @@ def get_cards(curr_usr):
     data = request.json
     # GAME_DETAILS = GAMES[data["game_id"]]
     GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
-    arrangement = Player_arrangement[data["game_id"]]
-    
+    arrangement = Player_Arrangement_collection.find_one({"game_id": data["game_id"]})
+    arrangement = arrangement["Arrangement"]
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
-    usr_id = USERNAME_TO_USR_DICT[curr_usr]
+    usr_dict = USERNAME_TO_USR_DICT_collection.find_one({"game_id": data["game_id"], "Player": curr_usr})
+    usr_id = usr_dict["USR_ID"]
     data = {'CARDS': USERS_CARD_DICT[usr_id], "arrangement": arrangement[curr_usr],"success": True}
     return jsonify(data)
 
@@ -277,8 +281,12 @@ def verify(phone):
     data = request.json
     OTP = data["OTP"]
     res = OTPS_collection.find_one({"phone": phone})
+    print(res)
     if(res):
         if(res["OTP"] == OTP):
+            r = Waiting_Users_collection.find_one({"phone": data["phone"] })
+            r["_id"] = str(r["_id"])
+            Users_collection.insert_one(r)
             return jsonify({"success": True})
         return jsonify({"success": False, "Message": f"The verification code does not match."})
     return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
@@ -299,7 +307,7 @@ def register():
         OTP_DICT["phone"] = data["phone"]
         push_OTP(User_OTP, data["phone"])
         OTPS_collection.insert_one(OTP_DICT)
-        Users_collection.insert_one(data)
+        Waiting_Users_collection.insert_one(data)
         return jsonify({"success": True})
 
 
@@ -351,7 +359,7 @@ def create_tournament():
         new_game["Is_Tournament"] = True
         new_game["players"] = 4
         new_game["stake"] = data["stake"]
-        data["Current_player"] = ""
+        new_game["Current_player"] = ""
         new_game["start_date"] = f"{randint(1,30)}/{randint(3,12)}/2023"
         new_game["registered_players"] = []
         new_game["Tittle"] = f"{name} - Game {i + 1}/{groups}"
@@ -421,33 +429,47 @@ def find_me(list_, me):
 def enter_game(id):
     try:
         # GAME_DETAILS = GAMES[id]
+        data = request.json
         GAME_DETAILS = GAMES_collection.find_one({"Id": id})
         players = list(GAMES_PLAYERS_collection.find({"game_id": id}))
+
+        if(len(players) >=  int(GAME_DETAILS["players"]) and not find_me(players, data["username"])):
+            Is_allowed["Value"] = True
+            return jsonify({"success": False, "Message": "Game is at maximum capacity"})
+
         player_count = len(players)
         player_idx = len(players)
         usr_id = 'USR_' + str(len(players)) + '_CARDS'
-        data = request.json
+        
         players_cl = []
         for plyr in players:
             plyr["_id"] = str(plyr["_id"]) 
             players_cl.append(plyr)
         players = players_cl
-        
-        if(len(players) >=  int(GAME_DETAILS["players"]) and not find_me(players, data["username"])):
-            Is_allowed["Value"] = True
-            return jsonify({"success": False, "Message": "Game is at maximum capacity"})
         res = GAMES_PLAYERS_collection.find_one({"player": data["username"]})
         if(res):
-            return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": player_idx,"game_id": id, "Players": len(players), "All_Player": players})
+            return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": res["player_pos"],"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
             GAMES_collection.update_one({"Id": id},{"$set": {"Current_player": data["username"]}})
             # GAMES[id] = GAME_DETAILS
-        GAMES_PLAYERS_collection.insert_one({"game_id": id,"player": data["username"]})
+        GAMES_PLAYERS_collection.insert_one({"game_id": id,"player": data["username"], "player_pos": player_idx})
         # players.append(data["username"])
+        players = list(GAMES_PLAYERS_collection.find({"game_id": id}))
+        players_cl = []
+        for plyr in players:
+            plyr["_id"] = str(plyr["_id"]) 
+            players_cl.append(plyr)
+        players = players_cl
         arrangement = next_player_arrangement(players.copy(), int(GAME_DETAILS["players"]), 0, {})
+
         USERNAME_TO_USR_DICT[data["username"]] = usr_id
         # GAME_PLAYERS[id] = players
-        Player_arrangement[id] = arrangement
+        ARR = {"Arrangement":arrangement, "game_id": id}
+
+        USERNAME_TO_USR_DICT_v2 = {"USR_ID": usr_id, "Player": data["username"], "game_id": id}
+        Player_Arrangement_collection.insert_one(ARR)
+        USERNAME_TO_USR_DICT_collection.insert_one(USERNAME_TO_USR_DICT_v2)
+        # Player_arrangement[id] = {"Arrangement":arrangement, "game_id": id}
         # 
         return jsonify({"success": True, "Current_player": GAME_DETAILS["Current_player"],"player_pos": player_idx,"game_id": id, "Players": player_count + 1, "All_Player": players})
 
