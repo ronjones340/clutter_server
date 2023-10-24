@@ -275,18 +275,49 @@ def get_cards(curr_usr):
 # def get_usr_cards(id):
 #     data = {'success': True, 'CARDS': USERS_CARD_DICT[id]}
 #     return jsonify(data)
+@app.route("/reset_code/<string:phone>", methods=["GET"])
+def reset_code(phone):
+    res = Users_collection.find_one({"phone": phone})
+    if(res):
+        payload = {"OTP": get_OTP(), "phone": phone}
+        push_OTP(payload["OTP"], phone)
+        OTPS_collection.insert_one(payload)
+        return jsonify({"success": True})
+    return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
+
+@app.route("/reset_password/<string:phone>", methods=["POST"])
+def reset_password(phone):
+    res = Users_collection.find_one({"phone": phone})
+    data = request.json
+    if(res):
+        Users_collection.update_one({"phone": phone}, {"$set": {"password": data["password"]} })
+        OTPS_collection.delete_one({"phone": phone})
+        return jsonify({"success": True})
+    return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
+
+@app.route("/verify_reset/<string:phone>", methods=["POST"])
+def verify_reset(phone):
+    data = request.json
+    OTP = data["OTP"]
+    res = OTPS_collection.find_one({"phone": phone})
+    if(res):
+        if(res["OTP"] == OTP):
+            OTPS_collection.delete_one({"OTP": res["OTP"]})
+            return jsonify({"success": True})
+        return jsonify({"success": False, "Message": f"The verification code does not match."})
+    return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})  
 
 @app.route("/verify/<string:phone>", methods=["POST"])
 def verify(phone):
     data = request.json
     OTP = data["OTP"]
     res = OTPS_collection.find_one({"phone": phone})
-    print(res)
     if(res):
         if(res["OTP"] == OTP):
             r = Waiting_Users_collection.find_one({"phone": data["phone"] })
             r["_id"] = str(r["_id"])
             Users_collection.insert_one(r)
+            OTPS_collection.delete_one({"OTP": res["OTP"]})
             return jsonify({"success": True})
         return jsonify({"success": False, "Message": f"The verification code does not match."})
     return jsonify({"success": False, "Message": f"The phone number {phone} does not exists."})
