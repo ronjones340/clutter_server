@@ -32,7 +32,7 @@ emails = []
 GAMES = {}
 GAME_PLAYERS = {}
 Player_arrangement = {}
-LoggedInPlayers = {"Total_online": 0}
+LoggedInPlayers = {"Total_online": 0, "LoggedIn": []}
 Is_allowed = {"Value": True}
 
 TOURNAMENTS = {}
@@ -141,7 +141,8 @@ def get_deck(id):
 @app.route("/pick_single/<string:id>", methods=["POST"])
 def pick_single(id):
     data = request.json
-    usr_id = USERNAME_TO_USR_DICT[data["username"]]
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = usr_id["USR_ID"]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_arrangement[id]
     curr_arrangement = arrangements[data["username"]]
@@ -169,7 +170,8 @@ def pick_single(id):
 @app.route("/pick_two/<string:id>", methods=["POST"])
 def pick_two(id):
     data = request.json
-    usr_id = USERNAME_TO_USR_DICT[data["username"]]
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = usr_id["USR_ID"]
     # GAME_DETAILS = GAMES[id]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_arrangement[id]
@@ -210,7 +212,8 @@ def pick_two(id):
 @app.route("/pick_three/<string:id>", methods=["POST"])
 def pick_three(id):
     data = request.json
-    usr_id = USERNAME_TO_USR_DICT[data["username"]]
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = usr_id["USR_ID"]
     # GAME_DETAILS = GAMES[id]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_arrangement[id]
@@ -514,7 +517,13 @@ def login():
     if(res):
         if(res["password"] == data["password"]):
             l_players = LoggedInPlayers['Total_online']
-            l_players += 1
+            if(data["phone"] in LoggedInPlayers["LoggedIn"]):
+                pass
+            else:
+                logged_In = LoggedInPlayers["LoggedIn"]
+                logged_In.append(data["phone"])
+                l_players += 1
+                LoggedInPlayers["LoggedIn"] = logged_In
             LoggedInPlayers['Total_online'] = l_players
             emit("log", {"Count": l_players},namespace="/", broadcast=True)
             return jsonify({"success": True, "Username":data["phone"], "Count": l_players})
@@ -552,12 +561,13 @@ def get_player_idx(player_det, cursor):
 def handle_drop(card_id):
     data = request.json
     pick_size = 1
-    players = GAMES_PLAYERS_collection.find({"game_id": id})
+    players = GAMES_PLAYERS_collection.find({"game_id": data["game_id"]})
     idx = get_player_idx(data["USR"], players)
     GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
     Dropped = GAME_DETAILS["Dropped"]
     USER_CARDS_DICT = GAME_DETAILS["Cards"]
-    usr_id = USERNAME_TO_USR_DICT[data["USR"]]
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = usr_id["USR_ID"]
     User_cards = USER_CARDS_DICT[usr_id]
     card_idx = User_cards.index(int(card_id))
     if(idx < len(players) - 1):
