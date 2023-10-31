@@ -366,7 +366,7 @@ def create_game():
     res = GAMES_CONSTANT_collection.find_one({"Tittle": "Is_Allowed"})
     if(res["Is_Allowed"]):
         GAMES_collection.insert_one(data)
-        GAMES_CONSTANT_collection.update_one({"Is_allowed": True}, {"$set": {"Is_allowed": False}})
+        GAMES_CONSTANT_collection.update_one({"Is_allowed": True}, {"$set": {"Is_Asllowed": False}})
         return jsonify({"success": True, "game_id": game_id})
     return jsonify({"success": False, "Message": "You are not allowed to create another game before the others are full"})
 
@@ -466,7 +466,7 @@ def enter_game(id):
         players = list(GAMES_PLAYERS_collection.find({"game_id": id}))
 
         if(len(players) >=  int(GAME_DETAILS["players"]) and not find_me(players, data["username"])):
-            Is_allowed["Value"] = True
+            GAMES_CONSTANT_collection.update_one({"Tittle": "Is_Allowed"}, {'$set':{"Is_Allowed": True}})
             return jsonify({"success": False, "Message": "Game is at maximum capacity"})
 
         player_count = len(players)
@@ -478,7 +478,7 @@ def enter_game(id):
             plyr["_id"] = str(plyr["_id"]) 
             players_cl.append(plyr)
         players = players_cl
-        res = GAMES_PLAYERS_collection.find_one({"player": data["username"]})
+        res = GAMES_PLAYERS_collection.find_one({"player": data["username"], "game_id": id})
         if(res):
             return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": res["player_pos"],"game_id": id, "Players": len(players), "All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
