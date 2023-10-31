@@ -16,3 +16,4 @@ werkzeug==2.2.3
 zipp==3.15.0
 infobip-api-python-sdk==5.0.1
 pymongo==4.5.0
+scaledrone==0.2.0
