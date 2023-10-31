@@ -5,7 +5,7 @@ from random import shuffle, randint
 from uuid import uuid4
 from infobip_channels.sms.channel import SMSChannel
 from pymongo.mongo_client import MongoClient
-# from pymongo import MongoClient
+from scaledrone import Scaledrone
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'AEF25993SACTFUWOPLMSFEWUHJAFQLP9873!'
@@ -16,7 +16,7 @@ client = MongoClient("mongodb+srv://ronjones8417:Emmanu3l698@cluster0.alreawj.mo
 db = client['Clutter']
 
 socketio = SocketIO(app,cors_allowed_origins="*")
-# mongo = PyMongo(app)
+drone = Scaledrone('v56CVew33z9v6mGr', 'XMhQLeSzTFeBm1G8DAud6WSu0UNA866A')
 
 API_KEY = "c419e63bfe1c78c294632dedba6bdcd0-052291eb-959b-47c2-b7f2-eb8a249d54b6"
 OTP_URL = "w11qj8.api.infobip.com"
@@ -144,11 +144,11 @@ def pick_single(id):
     usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
     usr_id = usr_id["USR_ID"]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
-    arrangements = Player_arrangement[id]
+    arrangements = Player_Arrangement_collection.find_one({"game_id": id})
+    arrangements = arrangements["Arrangement"]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
          return jsonify({"success" : False})
-
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
     user_cards = USERS_CARD_DICT[usr_id]
     CARD_Numbers = GAME_DETAILS["Pick_Deck"]
@@ -158,13 +158,9 @@ def pick_single(id):
         shuffle(CARD_Numbers, myfunction)
     user_cards.append(CARD_Numbers[0])
     CARD_Numbers.pop(0)
-    # USERS_CARD_DICT[usr_id] = user_cards
-    # GAME_DETAILS["Cards"] = USERS_CARD_DICT
-    # GAME_DETAILS["Pick_Deck"] = CARD_Numbers
-    # GAME_DETAILS["Dropped"] = []
-    # GAMES[id] = GAME_DETAILS
     GAMES_collection.update_one({"Id": id},{"$set": { "Cards": USERS_CARD_DICT, "Dropped": [] ,"Pick_Deck": CARD_Numbers }})
-    emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
+    # emit("setPlayer", {"player": curr_arrangement[0]},namespace="/", broadcast=True)
+    resp = drone.publish(id, {"Event": "setPlayer", "player": curr_arrangement[0]})
     return jsonify({"CARDS" : user_cards, 'success': True,'PICKS': CARD_Numbers})
 
 @app.route("/pick_two/<string:id>", methods=["POST"])
@@ -174,7 +170,8 @@ def pick_two(id):
     usr_id = usr_id["USR_ID"]
     # GAME_DETAILS = GAMES[id]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
-    arrangements = Player_arrangement[id]
+    arrangements = Player_Arrangement_collection.find_one({"game_id": id})
+    arrangements = arrangements["Arrangement"]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
          return jsonify({"success" : False})
@@ -216,7 +213,8 @@ def pick_three(id):
     usr_id = usr_id["USR_ID"]
     # GAME_DETAILS = GAMES[id]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
-    arrangements = Player_arrangement[id]
+    arrangements = Player_Arrangement_collection.find_one({"game_id": id})
+    arrangements = arrangements["Arrangement"]
     curr_arrangement = arrangements[data["username"]]
     if(GAME_DETAILS["Current_player"] != data["username"]):
          return jsonify({"success" : False})
@@ -523,6 +521,7 @@ def login():
                 logged_In = LoggedInPlayers["LoggedIn"]
                 logged_In.append(data["phone"])
                 l_players += 1
+                response = drone.publish("login", l_players)
                 LoggedInPlayers["LoggedIn"] = logged_In
             LoggedInPlayers['Total_online'] = l_players
             emit("log", {"Count": l_players},namespace="/", broadcast=True)
@@ -556,31 +555,32 @@ def get_player_idx(player_det, cursor):
     for player in cursor:
         if(player["player"] == player_det):
             return i
+        i += 1
         
 @app.route("/handle_drop/<string:card_id>", methods=["POST"])
 def handle_drop(card_id):
     data = request.json
     pick_size = 1
-    players = GAMES_PLAYERS_collection.find({"game_id": data["game_id"]})
+    players = list(GAMES_PLAYERS_collection.find({"game_id": data["game_id"]}))
     idx = get_player_idx(data["USR"], players)
     GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
     Dropped = GAME_DETAILS["Dropped"]
     USER_CARDS_DICT = GAME_DETAILS["Cards"]
-    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["USR"]})
     usr_id = usr_id["USR_ID"]
     User_cards = USER_CARDS_DICT[usr_id]
+    print(User_cards)
     card_idx = User_cards.index(int(card_id))
     if(idx < len(players) - 1):
-        next_player = players[idx + 1]
+        next_player = players[idx + 1]["player"]
     else:
-        next_player = players[0]
-
+        next_player = players[0]["player"]
     if(data["Action"] == "HOLD"):
-        net_data = USER_COMM_DETAILS[next_player]
+        # net_data = USER_COMM_DETAILS[next_player]
         Act = "WAIT"
         GAME_DETAILS["Current_player"] = next_player
     elif(data["Action"] == "PICK_MULTIPLE"):
-        net_data = USER_COMM_DETAILS[next_player]
+        # net_data = USER_COMM_DETAILS[next_player]
         GAME_DETAILS["Current_player"] = next_player
         Act = "PICK_MULTIPLE"
         pick_size = 2
@@ -590,32 +590,29 @@ def handle_drop(card_id):
         else:
             next_player = players[1]
         GAME_DETAILS["Current_player"] = next_player
-        net_data = USER_COMM_DETAILS[next_player]
+        # net_data = USER_COMM_DETAILS[next_player]
         Act = "WAIT"
     else:
-        net_data = USER_COMM_DETAILS[data["USR"]]
+        # net_data = USER_COMM_DETAILS[data["USR"]]
         next_player = data["USR"]
         GAME_DETAILS["Current_player"] = data["USR"]
         Act = data["Action"]
-    Dropped.append(card_id)
-    emit("drop", {"Card_Id": int(card_id), "Player": data["USR"]},namespace="/", broadcast=True)
+    Dropped.append(int(card_id))
+
+    response = drone.publish(data["game_id"], {"Event": "drop","Card_Id": int(card_id), "Player": data["USR"]})
     if(Act == "TRIPLE_CONGRESS" or Act == "CONGRESS"):
-        emit("setAction", {"Act": Act},namespace="/", broadcast=True)
+        response = drone.publish(data["game_id"],{"Event": "setAction","Act": Act, "Owner": data["USR"]})
+        # emit("setAction", {"Act": Act},namespace="/", broadcast=True)
     else:
-        emit("setAction", {"Act": Act, "S": pick_size},namespace="/", room=net_data["id"])
+        response = drone.publish(data["game_id"],{"Event": "setAction","Act": Act, "S": pick_size, "player": next_player})
     User_cards.pop(card_idx)
     if(len(User_cards) == 1 & int(card_id) >= 12):
-        emit("onCard", {"Player": data["USR"], "index": idx},namespace="/", broadcast=True)
-    emit("setPlayer", {"player": next_player},namespace="/", broadcast=True)
-    USER_CARDS_DICT[usr_id] = User_cards
-    # GAME_DETAILS["Cards"] = USER_CARDS_DICT
-    # GAME_DETAILS["Top"] = int(card_id)
-    # GAME_DETAILS["Dropped"] = Dropped
-    # GAME_DETAILS["Current_player"] = next_player
-    # GAMES[data["game_id"]] = GAME_DETAILS
-    GAMES_collection.update_one({"Id": data["game_id"]}, {"$set" : {"Current_player": next_player,"Dropped": Dropped,"Top": int(card_id),"Cards": USER_CARDS_DICT}})
+        response = drone.publish(data["game_id"],{"onCard": "setAction","Player": data["USR"], "index": idx})
+        # emit("onCard", {"Player": data["USR"], "index": idx},namespace="/", broadcast=True)
+    response = drone.publish(data["game_id"],{"Event": "setPlayer", "player": next_player})
     
-
+    USER_CARDS_DICT[usr_id] = User_cards 
+    GAMES_collection.update_one({"Id": data["game_id"]}, {"$set" : {"Current_player": next_player,"Dropped": Dropped,"Top": int(card_id),"Cards": USER_CARDS_DICT}})
     return jsonify({"Card_Id": int(card_id), "next_player": next_player})
 
 
