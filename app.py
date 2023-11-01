@@ -265,6 +265,7 @@ def get_cards(curr_usr):
     # GAME_DETAILS = GAMES[data["game_id"]]
     GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
     arrangement = Player_Arrangement_collection.find_one({"game_id": data["game_id"]})
+    print(arrangement)
     arrangement = arrangement["Arrangement"]
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
     usr_dict = USERNAME_TO_USR_DICT_collection.find_one({"game_id": data["game_id"], "Player": curr_usr})
@@ -480,7 +481,8 @@ def enter_game(id):
         players = players_cl
         res = GAMES_PLAYERS_collection.find_one({"player": data["username"], "game_id": id})
         if(res):
-            return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": res["player_pos"],"game_id": id, "Players": len(players), "All_Player": players})
+            GAMES_PLAYERS_collection.delete_one({"player": data["username"],"game_id": id})
+            return jsonify({"success": True,"Current_player": GAME_DETAILS["Current_player"] ,"player_pos": res["player_pos"],"game_id": id, "Players": len(players) ,"All_Player": players})
         if(GAME_DETAILS["Current_player"] == ""):
             GAMES_collection.update_one({"Id": id},{"$set": {"Current_player": data["username"]}})
             # GAMES[id] = GAME_DETAILS
@@ -493,13 +495,13 @@ def enter_game(id):
             players_cl.append(plyr)
         players = players_cl
         arrangement = next_player_arrangement(players.copy(), int(GAME_DETAILS["players"]), 0, {})
-
+        print(arrangement)
         USERNAME_TO_USR_DICT[data["username"]] = usr_id
         # GAME_PLAYERS[id] = players
         ARR = {"Arrangement":arrangement, "game_id": id}
-
+        print(ARR)
         USERNAME_TO_USR_DICT_v2 = {"USR_ID": usr_id, "Player": data["username"], "game_id": id}
-        Player_Arrangement_collection.insert_one(ARR)
+        Player_Arrangement_collection.update_one({"game_id": id}, {"$set": {"Arrangement":arrangement}})
         USERNAME_TO_USR_DICT_collection.insert_one(USERNAME_TO_USR_DICT_v2)
         # Player_arrangement[id] = {"Arrangement":arrangement, "game_id": id}
         # 
