@@ -141,14 +141,14 @@ def get_deck(id):
 @app.route("/pick_single/<string:id>", methods=["POST"])
 def pick_single(id):
     data = request.json
-    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"], "game_id":data["game_id"]})
     usr_id = usr_id["USR_ID"]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
     arrangements = Player_Arrangement_collection.find_one({"game_id": id})
     arrangements = arrangements["Arrangement"]
     curr_arrangement = arrangements[data["username"]]
-    if(GAME_DETAILS["Current_player"] != data["username"]):
-         return jsonify({"success" : False})
+    # if(GAME_DETAILS["Current_player"] != data["username"]):
+    #      return jsonify({"success" : False})
     USERS_CARD_DICT = GAME_DETAILS["Cards"]
     user_cards = USERS_CARD_DICT[usr_id]
     CARD_Numbers = GAME_DETAILS["Pick_Deck"]
@@ -166,7 +166,7 @@ def pick_single(id):
 @app.route("/pick_two/<string:id>", methods=["POST"])
 def pick_two(id):
     data = request.json
-    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"], "game_id":data["game_id"]})
     usr_id = usr_id["USR_ID"]
     # GAME_DETAILS = GAMES[id]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
@@ -209,7 +209,7 @@ def pick_two(id):
 @app.route("/pick_three/<string:id>", methods=["POST"])
 def pick_three(id):
     data = request.json
-    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"]})
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["username"], "game_id":data["game_id"]})
     usr_id = usr_id["USR_ID"]
     # GAME_DETAILS = GAMES[id]
     GAME_DETAILS = GAMES_collection.find_one({"Id": id})
@@ -558,6 +558,7 @@ def get_player_idx(player_det, cursor):
         if(player["player"] == player_det):
             return i
         i += 1
+    return i
         
 @app.route("/handle_drop/<string:card_id>", methods=["POST"])
 def handle_drop(card_id):
@@ -568,11 +569,11 @@ def handle_drop(card_id):
     GAME_DETAILS = GAMES_collection.find_one({"Id": data["game_id"]})
     Dropped = GAME_DETAILS["Dropped"]
     USER_CARDS_DICT = GAME_DETAILS["Cards"]
-    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["USR"]})
+    usr_id = USERNAME_TO_USR_DICT_collection.find_one({"Player": data["USR"], "game_id": data["game_id"]})
     usr_id = usr_id["USR_ID"]
     User_cards = USER_CARDS_DICT[usr_id]
-    print(User_cards)
     card_idx = User_cards.index(int(card_id))
+    print(card_idx)
     if(idx < len(players) - 1):
         next_player = players[idx + 1]["player"]
     else:
